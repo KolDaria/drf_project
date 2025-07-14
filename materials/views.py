@@ -6,14 +6,18 @@ from materials.serializers import CourseSerializer, LessonSerializer
 
 class CourseViewSet(viewsets.ModelViewSet):
     serializer_class = CourseSerializer
-    queryset = Course.objects.all()
+
+    def get_queryset(self):
+        return Course.objects.prefetch_related('lessons')
 
 class LessonCreateAPIView(generics.CreateAPIView):
     serializer_class = LessonSerializer
 
 class LessonListAPIView(generics.ListAPIView):
     serializer_class = LessonSerializer
-    queryset = Lesson.objects.all()
+
+    def get_queryset(self):
+        return Lesson.objects.select_related('course')
 
 class LessonRetrieveAPIView(generics.RetrieveAPIView):
     serializer_class = LessonSerializer
