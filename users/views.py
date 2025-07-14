@@ -1,17 +1,41 @@
 from django.contrib.auth import get_user_model
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import generics, filters
-from rest_framework.permissions import AllowAny
+from rest_framework import filters, generics
+from rest_framework.permissions import IsAdminUser
 
 from users.models import Payments
-from users.serializers import UserSerializer, PaymentsSerializer
+from users.serializers import PaymentsSerializer, UserSerializer
 
 User = get_user_model()
 
-class UserCreate(generics.CreateAPIView):
+
+class UserCreateAPIView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [AllowAny]
+
+
+class UserListAPIView(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAdminUser]
+
+
+class UserUpdateAPIView(generics.UpdateAPIView):
+    serializer_class = UserSerializer
+    queryset = User.objects.all()
+    permission_classes = [IsAdminUser]
+
+
+class UserRetrieveAPIView(generics.RetrieveAPIView):
+    serializer_class = UserSerializer
+    queryset = User.objects.all()
+    permission_classes = [IsAdminUser]
+
+
+class UserDestroyAPIView(generics.DestroyAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAdminUser]
 
 
 class PaymentListAPIView(generics.ListAPIView):
