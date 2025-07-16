@@ -5,6 +5,11 @@ from users.models import Payments
 
 User = get_user_model()
 
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'first_name', 'last_name', 'avatar', 'phone', 'country')
+
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
