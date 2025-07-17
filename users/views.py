@@ -4,7 +4,8 @@ from rest_framework import filters, generics
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 
 from users.models import Payments
-from users.serializers import PaymentsSerializer, UserSerializer, UserProfileSerializer
+from users.permissions import IsSelf
+from users.serializers import PaymentsSerializer, UserProfileSerializer, UserSerializer
 
 User = get_user_model()
 
@@ -20,30 +21,47 @@ class UserListAPIView(generics.ListAPIView):
     permission_classes = [IsAdminUser]
 
 
-class UserUpdateAPIView(generics.UpdateAPIView):
-    serializer_class = UserSerializer
-    queryset = User.objects.all()
-    permission_classes = [IsAuthenticated]
-
-    def get_object(self):
-        return self.request.user
-
-
-class UserRetrieveAPIView(generics.RetrieveAPIView):
-    serializer_class = UserProfileSerializer
-    queryset = User.objects.all()
-    permission_classes = [IsAuthenticated]
-
-
 class UserDestroyAPIView(generics.DestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAdminUser]
 
 
+class UserRetrieveAPIView(generics.RetrieveAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+
+class UserUpdateAPIView(generics.UpdateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+
 class PaymentListAPIView(generics.ListAPIView):
     serializer_class = PaymentsSerializer
     queryset = Payments.objects.all()
+    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     ordering_fields = ['payment_date', 'payment_amount']
     filterset_fields = ['paid_course', 'paid_lesson', 'payment_method', 'user']
+
+
+class UserProfileView(generics.RetrieveAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+
+class UserUpdateView(generics.UpdateAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated, IsSelf]
+
+    def get_object(self):
+        return self.request.user
+
+    def perform_update(self, serializer):
+        serializer.save()

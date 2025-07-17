@@ -1,4 +1,4 @@
-from rest_framework import generics, permissions, viewsets
+from rest_framework import generics, viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 
@@ -20,7 +20,7 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action == 'create' or self.action == 'destroy':
-            permission_classes = [IsAuthenticated, IsAdminUser]
+            permission_classes = [IsAuthenticated, (IsAdminUser | IsModerator)]
         elif self.action in ['update', 'partial_update', 'retrieve']:
             permission_classes = [IsAuthenticated, IsOwner, IsModerator]
         elif self.action == 'list':
@@ -46,7 +46,7 @@ class LessonCreateAPIView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
-        serializer.save(IsOwner=self.request.user)
+        serializer.save(owner=self.request.user)
 
 
 class LessonListAPIView(generics.ListAPIView):
@@ -73,4 +73,4 @@ class LessonUpdateAPIView(generics.UpdateAPIView):
 
 class LessonDestroyAPIView(generics.DestroyAPIView):
     queryset = Lesson.objects.all()
-    permission_classes = [IsAuthenticated, IsOwner, IsAdminUser]
+    permission_classes = [IsAuthenticated, (IsOwner | IsAdminUser | IsModerator)]

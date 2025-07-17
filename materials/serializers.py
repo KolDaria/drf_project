@@ -4,6 +4,7 @@ from materials.models import Course, Lesson
 
 
 class LessonSerializer(serializers.ModelSerializer):
+    owner = serializers.ReadOnlyField(source='owner.id')
 
     class Meta:
         model = Lesson
