@@ -1,9 +1,16 @@
-from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from rest_framework import serializers
 
 from users.models import Payments
 
 User = get_user_model()
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'first_name', 'last_name', 'avatar', 'phone', 'country')
+
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -17,6 +24,7 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         return user
+
 
 class PaymentsSerializer(serializers.ModelSerializer):
     user_email = serializers.CharField(source='user.email', read_only=True)
