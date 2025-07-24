@@ -14,12 +14,18 @@ psycopg2-binary = "^2.9.10"
 pillow = "^11.3.0"
 django-filter = "^25.1"
 djangorestframework-simplejwt = "^5.5.0"
+coverage = "^7.9.2"
 
 
 [tool.poetry.group.lint.dependencies]
 black = "^25.1.0"
 isort = "^6.0.1"
 flake8 = "^7.3.0"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.1"
+pytest-cov = "^6.2.1"
 
 [build-system]
 requires = ["poetry-core"]

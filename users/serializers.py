@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from users.models import Payments
+from users.models import Payments, Subscription
 
 User = get_user_model()
 
@@ -35,3 +35,9 @@ class PaymentsSerializer(serializers.ModelSerializer):
         model = Payments
         fields = ['id', 'user', 'user_email', 'payment_date', 'paid_course', 'paid_course_name', 'paid_lesson',
                   'paid_lesson_name', 'payment_amount', 'payment_method']
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subscription
+        fields = '__all__'

@@ -6,8 +6,7 @@ class Course(models.Model):
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='courses',
-        default=1
+        related_name='courses'
     )
     name = models.CharField(
         max_length=150,
@@ -40,8 +39,7 @@ class Lesson(models.Model):
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='lessons',
-        default=1
+        related_name='lessons'
     )
     name = models.CharField(
         max_length=150,
