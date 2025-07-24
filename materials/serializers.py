@@ -12,8 +12,7 @@ class LessonSerializer(serializers.ModelSerializer):
         model = Lesson
         fields = '__all__'
         validators = [
-            TitleValidator(field='video_url'),
-            serializers.UniqueTogetherValidator(fields=['video_url'], queryset=Lesson.objects.all())
+            TitleValidator(field='video_url')
         ]
 
 
@@ -25,6 +24,7 @@ class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = '__all__'
+        extra_kwargs = {'owner': {'read_only': 'True'}}
 
     def get_number_lessons(self, instance):
         return instance.lessons.count()
