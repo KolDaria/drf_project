@@ -1,15 +1,24 @@
-from rest_framework import generics, viewsets
+from datetime import timezone
+
+from rest_framework import generics, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST, require_GET
+from django.urls import reverse
+from rest_framework.views import APIView
 
 from materials.models import Course, Lesson
 from materials.paginators import VehiclePaginator
 from materials.permissions import IsModerator, IsOwner
 from materials.serializers import CourseSerializer, LessonSerializer
-from users.models import Subscription
+from materials.services import StripeApiService
+from users.models import Subscription, Payments
 
+stripe_service = StripeApiService()
 
 class CourseViewSet(viewsets.ModelViewSet):
     serializer_class = CourseSerializer
@@ -122,3 +131,81 @@ class LessonUpdateAPIView(generics.UpdateAPIView):
 class LessonDestroyAPIView(generics.DestroyAPIView):
     queryset = Lesson.objects.all()
     permission_classes = [IsAuthenticated, (IsOwner | IsAdminUser | IsModerator)]
+
+
+class CreateStripeCheckoutSessionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, course_id):
+        """
+        Создает сессию Stripe Checkout для оплаты курса.
+        """
+        course = get_object_or_404(Course, pk=course_id)
+
+        # 1. Получаем или создаем Price ID в Stripe
+        stripe_price_id = stripe_service.get_create_stripe_price(course)
+        if not stripe_price_id:
+            return Response(
+                {"error": "Не удалось создать или получить Stripe Price ID."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        # 2.  Формируем URL-ы для успеха и отмены платежа.
+        success_url = request.build_absolute_uri(reverse('materials:payment_success', args=[course.pk]))  # materials: из urls.py
+        cancel_url = request.build_absolute_uri(reverse('materials:payment_cancel', args=[course.pk]))
+
+        # 3. Создаем сессию Stripe Checkout
+        session = stripe_service.create_stripe_checkout_session(
+            price_id=stripe_price_id,
+            success_url=success_url,
+            cancel_url=cancel_url
+        )
+
+        if not session:
+            return Response(
+                {"error": "Не удалось создать сессию Stripe Checkout."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        # 4. Создаем запись о платеже в нашей системе (используем модель Payments из users)
+        from users.models import Payments  # Импортируем модель Payments
+
+        payment = Payments.objects.create(
+            user=request.user,
+            paid_course=course,
+            payment_date=timezone.now(),
+            payment_amount=course.price,
+            payment_method='stripe',  # Или константа
+            stripe_session_id=session.id,
+            payment_link=session.url,
+        )
+
+        # 5. Возвращаем URL для перенаправления пользователя на Stripe
+        return Response({"payment_url": session.url}, status=status.HTTP_200_OK)
+
+
+class PaymentSuccessView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, course_id):
+        """
+        Обрабатывает успешную оплату курса.
+        """
+        course = get_object_or_404(Course, pk=course_id)
+        # Дополнительная логика, например, предоставление доступа к курсу
+
+        return Response({"message": "Оплата успешно произведена! Доступ к курсу предоставлен."},
+                        status=status.HTTP_200_OK)
+
+
+class PaymentCancelView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, course_id):
+        """
+        Обрабатывает отмену оплаты курса.
+        """
+        course = get_object_or_404(Course, pk=course_id)
+        # Логика при отмене платежа
+
+        return Response({"message": "Оплата отменена."}, status=status.HTTP_200_OK)
