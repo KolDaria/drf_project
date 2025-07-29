@@ -26,6 +26,27 @@ class Course(models.Model):
         null=True,
         help_text="Введите описание курса",
     )
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Стоимость",
+        help_text="Укажите стоимость курса",
+        default=0.00,
+        blank=False,
+        null=False,
+    )
+    stripe_product_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Stripe продукт ID"
+    )
+    stripe_price_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Stripe цена ID"
+    )
 
     def __str__(self):
         return self.name
@@ -72,6 +93,27 @@ class Lesson(models.Model):
         blank=True,
         null=True,
         help_text="Загрузите ссылку на видео"
+    )
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Стоимость",
+        help_text="Укажите стоимость урока",
+        default=0.00,
+        blank=False,
+        null=False,
+    )
+    stripe_product_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Stripe продукт ID"
+    )
+    stripe_price_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Stripe цена ID"
     )
 
     def __str__(self):
