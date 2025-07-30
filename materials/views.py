@@ -6,10 +6,9 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST, require_GET
 from django.urls import reverse
 from rest_framework.views import APIView
+from materials.tasks import send_course_update_notification
 
 from materials.models import Course, Lesson
 from materials.paginators import VehiclePaginator
@@ -69,10 +68,13 @@ class CourseViewSet(viewsets.ModelViewSet):
         user = request.user
 
         if Subscription.objects.filter(user=user, course=course).exists():
-            return Response({"message": "Вы уже подписаны на этот курс."}, status=400)
+            return Response({"message": "Вы уже подписаны на этот курс."}, status=status.HTTP_400_BAD_REQUEST)
 
         Subscription.objects.create(user=user, course=course)
-        return Response({"message": "Вы успешно подписались на этот курс."}, status=201)
+
+        serializer = self.get_serializer(course)
+        return Response({"message": "Вы успешно подписались на этот курс.", "course": serializer.data},
+                        status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'])
     def unsubscribe(self, request, pk=None):
@@ -82,9 +84,13 @@ class CourseViewSet(viewsets.ModelViewSet):
         try:
             subscription = Subscription.objects.get(user=user, course=course)
             subscription.delete()
-            return Response({"message": "Вы успешно отписались от этого курса."}, status=200)
+
+            serializer = self.get_serializer(course)
+            return Response({"message": "Вы успешно отписались от этого курса.", "course": serializer.data},
+                            status=status.HTTP_200_OK)
+
         except Subscription.DoesNotExist:
-            return Response({"message": "Вы не подписаны на этот курс."}, status=400)
+            return Response({"message": "Вы не подписаны на этот курс."}, status=status.HTTP_400_BAD_REQUEST)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -94,6 +100,32 @@ class CourseViewSet(viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, context={'request': request})
+        return Response(serializer.data)
+
+    def update(self, request, *args, **kwargs):
+        """
+        Переопределяем метод update для отправки уведомлений подписчикам.
+        """
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # Отправка уведомлений подписчикам
+        subscriptions = Subscription.objects.filter(course=instance)
+        for subscription in subscriptions:
+            if subscription.user.email:
+                try:
+                    send_course_update_notification.delay(
+                        course_name=instance.name,
+                        course_id=instance.pk,
+                        recipient_email=subscription.user.email,
+                    )
+                except Exception as e:
+                    print(
+                        f"Ошибка при отправке уведомления подписчику {subscription.user.email}: {e}")  # Логируем ошибки
+
         return Response(serializer.data)
 
 
