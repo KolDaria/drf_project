@@ -3,8 +3,8 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from users.models import User, Subscription
-from materials.models import Course, Lesson
+from materials.models import Course
+from users.models import Subscription, User
 
 
 class CourseViewSetTestCase(APITestCase):
@@ -155,7 +155,7 @@ class CourseViewSetTestCase(APITestCase):
         data = {'name': 'Обновленный курс',
                 'description': 'Обновленное описание',
                 'owner': self.owner_user.pk
-        }
+                }
         url = reverse('materials:course-detail', kwargs={'pk': self.course1.pk})
         response = self.client.put(url, data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

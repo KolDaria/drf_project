@@ -1,23 +1,24 @@
 from datetime import timezone
 
-from rest_framework import generics, viewsets, status
+from django.shortcuts import get_object_or_404
+from django.urls import reverse
+from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from django.urls import reverse
 from rest_framework.views import APIView
-from materials.tasks import send_course_update_notification
 
 from materials.models import Course, Lesson
 from materials.paginators import VehiclePaginator
 from materials.permissions import IsModerator, IsOwner
 from materials.serializers import CourseSerializer, LessonSerializer
 from materials.services import StripeApiService
-from users.models import Subscription, Payments
+from materials.tasks import send_course_update_notification
+from users.models import Payments, Subscription
 
 stripe_service = StripeApiService()
+
 
 class CourseViewSet(viewsets.ModelViewSet):
     serializer_class = CourseSerializer

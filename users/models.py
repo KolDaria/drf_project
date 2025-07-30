@@ -36,6 +36,7 @@ class User(AbstractUser):
 
     token = models.CharField(max_length=100, verbose_name="Token", blank=True, null=True)
     is_blocked = models.BooleanField(default=False, verbose_name="Заблокирован")
+    last_login = models.DateTimeField(auto_now=True, verbose_name="Дата последнего входа")
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
