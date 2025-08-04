@@ -18,6 +18,10 @@ coverage = "^7.9.2"
 drf-yasg = "^1.21.10"
 requests = "^2.32.4"
 stripe = "^12.3.0"
+celery = "^5.5.3"
+redis = "^6.2.0"
+eventlet = "^0.40.2"
+django-celery-beat = "^2.8.1"
 
 
 [tool.poetry.group.lint.dependencies]

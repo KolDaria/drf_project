@@ -1,7 +1,10 @@
+from unittest.mock import patch
+
 import stripe
 from django.test import TestCase
-from unittest.mock import patch
+
 from materials.services import StripeApiService
+
 
 class StripeServiceTests(TestCase):
     @patch('stripe.Product.create')

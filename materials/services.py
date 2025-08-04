@@ -2,6 +2,7 @@ import stripe
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
+
 class StripeApiService:
     def __init__(self):
         self.api_key = getattr(settings, 'STRIPE_SECRET_KEY')
