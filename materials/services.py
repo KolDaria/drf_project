@@ -49,7 +49,7 @@ class StripeApiService:
                 return instance.stripe_price_id
             except stripe.error.InvalidRequestError:
                 pass
-            except stripe.error.StripeError as e:
+            except stripe.error.StripeError:
                 return None
         try:
             product_id = self.get_create_stripe_product(instance)
@@ -59,11 +59,11 @@ class StripeApiService:
             # **Добавляем проверку существования product_id в Stripe:**
             try:
                 stripe.Product.retrieve(product_id)
-            except stripe.error.InvalidRequestError as e:
+            except stripe.error.InvalidRequestError:
                 instance.stripe_product_id = None  # Обнуляем product_id в базе данных
                 instance.save()
                 return self.get_create_stripe_price(instance)  # Рекурсивно вызываем функцию для создания всего заново
-            except stripe.error.StripeError as e:
+            except stripe.error.StripeError:
                 return None
 
             price_in_cents = int(instance.price * 100)
@@ -76,7 +76,7 @@ class StripeApiService:
             instance.stripe_price_id = price.id
             instance.save()
             return price.id
-        except stripe.error.StripeError as e:
+        except stripe.error.StripeError:
             return None
 
     def create_stripe_checkout_session(self, price_id, success_url, cancel_url):
