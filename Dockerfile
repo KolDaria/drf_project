@@ -2,7 +2,7 @@
 FROM python:3.13.6-slim
 
 # Устанавливаем рабочую директорию в контейнере
-WORKDIR /app
+WORKDIR /code
 
 # Устанавливаем необходимые инструменты для сборки и Poetry
 RUN apt-get update && \
@@ -33,7 +33,7 @@ COPY . .
 ENV DJANGO_SETTINGS_MODULE=drf_project.settings
 
 # Создаем директорию для медиафайлов
-RUN mkdir -p /app/media
+RUN mkdir -p /code/media
 
 # Пробрасываем порт, который будет использовать Django
 EXPOSE 8000

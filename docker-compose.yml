@@ -29,7 +29,7 @@ services:
     env_file:
       - ./.env
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $DATABASE_USER -d $DATABASE_NAME" ]
+      test: [ "CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -49,10 +49,10 @@ services:
       retries: 3
       start_period: 60s
 
-  # Celery (опционально)
-  celery:
+  # Celery Worker (опционально)
+  celery_worker:
     build: .
-    command: celery -A drf_project celery -l info  # drf_project Название проекта
+    command: celery -A drf_project worker -l info  # drf_project Название проекта
     volumes:
       - .:/code
     depends_on:
