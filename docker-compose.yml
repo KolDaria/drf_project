@@ -1,0 +1,93 @@
+version: '3.9'
+
+services:
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/code
+      - static_volume:/code/static
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    env_file:
+      - ./.env
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8000/ || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  db:
+    image: postgres:17
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - ./.env
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Redis (опционально, для Celery)
+  redis:
+    image: redis:8.2.0
+    ports:
+      - "6379:6379"  # Для доступа к Redis с хоста
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Celery Worker (опционально)
+  celery_worker:
+    build: .
+    command: celery -A drf_project worker -l info  # drf_project Название проекта
+    volumes:
+      - .:/code
+    depends_on:
+      - web
+      - redis
+    env_file:
+      - ./.env
+    healthcheck:
+      test: [ "CMD-SHELL", "celery inspect ping -d celery@$HOSTNAME || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Celery Beat (опционально, для планировщика задач)
+  celery_beat:
+    build: .
+    command: celery -A drf_project beat -l info # drf_project Название проекта
+    volumes:
+      - .:/code
+    depends_on:
+      - redis
+      - celery_worker
+    env_file:
+      - ./.env
+    healthcheck:
+      test: [ "CMD-SHELL", "celery inspect ping -d celerybeat@$HOSTNAME || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  media_volume:

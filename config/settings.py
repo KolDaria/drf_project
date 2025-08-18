@@ -1,5 +1,4 @@
 import os
-from datetime import timedelta
 from pathlib import Path
 
 from celery.schedules import crontab
@@ -136,7 +135,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PERMISSION_CLASSES': [
    'rest_framework.permissions.AllowAny',
-],
+    ],
 }
 
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
