@@ -26,10 +26,10 @@ services:
       context: ./nginx
     ports:
       - "80:80"
-    voLumes:
+    volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - static_volume:/app/staticfiles
-  depends_on:
+    depends_on:
       - web
 
   db:
