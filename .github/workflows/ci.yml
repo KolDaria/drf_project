@@ -20,7 +20,7 @@ jobs:
           pip install poetry
 
       - name: Install dependencies
-        run: poetry install
+        run: poetry install --no-root --no-interaction --no-ansi
 
       - name: Run Flake8
         run: poetry run flake8 .
@@ -42,7 +42,7 @@ jobs:
           pip install poetry
 
       - name: Install dependencies
-        run: poetry install
+        run: poetry install --no-root --no-interaction --no-ansi
 
       - name: Start services (Docker Compose)
         run: docker compose up -d db redis
