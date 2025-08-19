@@ -64,7 +64,7 @@ services:
   # Celery Worker (опционально)
   celery_worker:
     build: .
-    command: celery -A drf_project worker -l info  # drf_project Название проекта
+    command: celery -A drf_project.config.celery worker -l info  # drf_project Название проекта
     volumes:
       - .:/code
     depends_on:
@@ -82,7 +82,7 @@ services:
   # Celery Beat (опционально, для планировщика задач)
   celery_beat:
     build: .
-    command: celery -A drf_project beat -l info # drf_project Название проекта
+    command: celery -A drf_project.config.celery beat -l info # drf_project Название проекта
     volumes:
       - .:/code
     depends_on:
