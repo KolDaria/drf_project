@@ -44,11 +44,19 @@ jobs:
       - name: Install dependencies
         run: poetry install
 
+      - name: Start services (Docker Compose)
+        run: docker compose up -d db redis
+
       - name: Run migrations
         run: poetry run python manage.py migrate
 
       - name: Run tests
         run: poetry run python manage.py test
+
+      - name: Stop services (Docker Compose)
+        if: always() # Always run this step
+        run: docker compose down -v # Останавливаем сервисы после тестов (с удалением томов)
+        # -v удаляет volume postgres_data и redis_data, после тестов - хорошо, если тесты не зависят от данных
 
   build:
     needs: test
@@ -81,6 +89,7 @@ jobs:
           docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/myapp:${{ github.sha }}
           docker stop myapp || true
           docker rm myapp || true
-          docker run -d --name myapp -p 80:8000 ${{ secrets.DOCKER_HUB_USERNAME }}/myapp:${{ github.sha }}
+          docker run -d --name myapp -p 80:8000 -e DJANGO_SETTINGS_MODULE=drf_project.settings.production \
+          -v /code/static:/code/static \
+           ${{ secrets.DOCKER_HUB_USERNAME }}/myapp:${{ github.sha }}
           EOF
-
