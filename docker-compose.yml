@@ -18,6 +18,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       DATABASE_PORT: 5432
       SECRET_KEY: ${SECRET_KEY}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:8000/ || exit 1" ]
       interval: 30s
