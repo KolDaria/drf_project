@@ -73,6 +73,7 @@ jobs:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DATABASE_PORT: 5432
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
         run: poetry run python manage.py migrate
 
       - name: Run tests
