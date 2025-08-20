@@ -60,7 +60,7 @@ jobs:
       - name: Wait for DB service
         run: |
             sleep 15
-            docker exec -i  `docker ps -q --filter "name=db"` bash -c 'until pg_isready -U postgres -d postgres; do echo waiting... && sleep 2; done'
+            docker exec -i $(docker ps -q --filter "name=db") pg_isready -U postgres -d postgres
 
       - name: Run migrations
         run: poetry run python manage.py migrate
@@ -70,8 +70,11 @@ jobs:
 
       - name: Stop services (Docker Compose)
         if: always()
-        run: docker compose down -v # Останавливаем сервисы после тестов (с удалением томов)
-        # -v удаляет volume postgres_data и redis_data, после тестов - хорошо, если тесты не зависят от данных
+        run: |
+          docker compose down \
+            -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
+            -e POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
+            -v 
 
   build:
     needs: test
