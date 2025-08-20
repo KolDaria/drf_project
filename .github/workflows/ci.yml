@@ -105,9 +105,14 @@ jobs:
         run: |
             scp -o StrictHostKeyChecking=no docker-compose.yml ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:/var/www/drf_project/docker-compose.yml
 
-      - name: Copy .env file to server
+      - name: Create .env file on server
         run: |
-            scp -o StrictHostKeyChecking=no .env ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:/var/www/drf_project/.env
+            ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "
+            mkdir -p /var/www/drf_project
+              echo DATABASE_URL=${{ secrets.DATABASE_URL }} > /var/www/drf_project/.env
+              echo DEBUG=${{ secrets.DEBUG }} >> /var/www/drf_project/.env
+              echo SECRET_KEY=${{ secrets.SECRET_KEY }} >> /var/www/drf_project/.env
+            "
 
       - name: Deploy to server
         run: |
