@@ -3,7 +3,7 @@ version: '3.9'
 services:
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
     volumes:
       - .:/code
       - static_volume:/code/static
@@ -16,7 +16,6 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: config.settings
       DATABASE_URL: ${DATABASE_URL}
-      DATABASE_PORT: 5432
       SECRET_KEY: ${SECRET_KEY}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
     healthcheck:
@@ -26,7 +25,6 @@ services:
       retries: 3
       start_period: 60s
 
-  # Nginx
   nginx:
     build:
       context: ./nginx
@@ -45,11 +43,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_DB: drf_project
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB" ]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d drf_project" ]
       interval: 30s
       timeout: 10s
       retries: 3
