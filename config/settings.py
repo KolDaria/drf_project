@@ -141,7 +141,7 @@ REST_FRAMEWORK = {
     ],
 }
 
-STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
 
 CELERY_BROKER_URL = 'redis://redis:6379/0'
 
