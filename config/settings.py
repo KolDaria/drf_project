@@ -3,7 +3,6 @@ import sys
 from pathlib import Path
 
 from celery.schedules import crontab
-from django.conf.global_settings import STATICFILES_DIRS
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -123,7 +122,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+STATICFILES_DIR = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Default primary key field type
@@ -138,25 +137,20 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-   'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.AllowAny',
     ],
 }
 
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 
-# URL-адрес брокера сообщений
-CELERY_BROKER_URL = 'redis://redis:6379/0' # Например, Redis, который по умолчанию работает на порту 6379
+CELERY_BROKER_URL = 'redis://redis:6379/0'
 
-# URL-адрес брокера результатов, также Redis
 CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
 
-# Часовой пояс для работы Celery
 CELERY_TIMEZONE = TIME_ZONE
 
-# Флаг отслеживания выполнения задач
 CELERY_TASK_TRACK_STARTED = True
 
-# Максимальное время на выполнение задачи
 CELERY_TASK_TIME_LIMIT = 30 * 60
 
 CELERY_BEAT_SCHEDULE = {
@@ -189,5 +183,5 @@ if 'test' in sys.argv:
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'test_db.sqlite3',
+        }
     }
-}
