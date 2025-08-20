@@ -12,7 +12,7 @@ services:
     depends_on:
       - db
     env_file:
-      - ./.env
+      - /var/www/drf_project/.env
     environment:
       DJANGO_SETTINGS_MODULE: config.settings
     healthcheck:
@@ -41,7 +41,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     env_file:
-      - ./.env
+      - /var/www/drf_project/.env
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB" ]
       interval: 30s
@@ -73,7 +73,7 @@ services:
       - web
       - redis
     env_file:
-      - ./.env
+      - /var/www/drf_project/.env
     environment:
       CELERY_APP: config.celery
     healthcheck:
@@ -93,7 +93,7 @@ services:
       - redis
       - celery_worker
     env_file:
-      - ./.env
+      - /var/www/drf_project/.env
     environment:
       CELERY_APP: config.celery
     healthcheck:
