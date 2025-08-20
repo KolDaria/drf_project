@@ -55,13 +55,17 @@ jobs:
         run: poetry install --no-root --no-interaction --no-ansi
 
       - name: Start services (Docker Compose)
-        run: docker compose up -d db redis
+        run: |
+          DATABASE_URL=${{ secrets.DATABASE_URL }} \
+          POSTGRES_USER=postgres \
+          POSTGRES_DB=drf_project \
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
+          docker compose up -d db redis
 
       - name: Wait for DB service
         run: |
           sleep 15
-          docker exec -i $(docker ps -q --filter "name=db" --format '{{.Names}}') sh -c 'until pg_isready -U 
-          postgres -d postgres; do echo waiting... && sleep 2; done'
+          docker exec -i $(docker ps -q --filter "name=db") psql -U postgres -d postgres -c "SELECT 1"
 
       - name: Run migrations
         run: poetry run python manage.py migrate
@@ -108,9 +112,12 @@ jobs:
       - name: Create .env file on server
         run: |
             ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "
-            mkdir -p /var/www/drf_project
+              mkdir -p /var/www/drf_project
               echo DATABASE_URL=${{ secrets.DATABASE_URL }} > /var/www/drf_project/.env
-            "
+              echo POSTGRES_USER=postgres >> /var/www/drf_project/.env
+              echo POSTGRES_DB=postgres >> /var/www/drf_project/.env
+              echo POSTGRES_PASSWORD=password >> /var/www/drf_project/.env
+              "
 
       - name: Deploy to server
         run: |
