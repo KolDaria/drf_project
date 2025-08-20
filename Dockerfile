@@ -30,7 +30,7 @@ RUN poetry install --no-root --no-interaction --no-ansi
 COPY . .
 
 # Определяем переменные окружения
-ENV DJANGO_SETTINGS_MODULE=drf_project.settings
+ENV DJANGO_SETTINGS_MODULE=config.settings
 
 # Создаем директорию для медиафайлов
 RUN mkdir -p /code/media
@@ -39,4 +39,4 @@ RUN mkdir -p /code/media
 EXPOSE 8000
 
 # Команда для запуска приложения (замените runserver на ваш production сервер)
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["gunicorn", "config.wsgi", "--bind", "0.0.0.0:8000", "--settings=config.settings"]
