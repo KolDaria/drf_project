@@ -12,9 +12,10 @@ services:
     depends_on:
       - db
     env_file:
-      - /var/www/drf_project/.env
+      - ./.env
     environment:
       DJANGO_SETTINGS_MODULE: config.settings
+      DATABASE_URL: ${DATABASE_URL}
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:8000/ || exit 1" ]
       interval: 30s
@@ -40,8 +41,10 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    env_file:
-      - /var/www/drf_project/.env
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: drf_project
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB" ]
       interval: 30s
@@ -73,7 +76,7 @@ services:
       - web
       - redis
     env_file:
-      - /var/www/drf_project/.env
+      - ./.env
     environment:
       CELERY_APP: config.celery
     healthcheck:
@@ -86,14 +89,14 @@ services:
   # Celery Beat (опционально, для планировщика задач)
   celery_beat:
     build: .
-    command: celery -A config.celery beat -l info
+    command: celery beat -A config.celery -l info
     volumes:
       - .:/code
     depends_on:
       - redis
       - celery_worker
     env_file:
-      - /var/www/drf_project/.env
+      - ./.env
     environment:
       CELERY_APP: config.celery
     healthcheck:

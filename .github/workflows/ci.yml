@@ -110,8 +110,6 @@ jobs:
             ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "
             mkdir -p /var/www/drf_project
               echo DATABASE_URL=${{ secrets.DATABASE_URL }} > /var/www/drf_project/.env
-              echo DEBUG=${{ secrets.DEBUG }} >> /var/www/drf_project/.env
-              echo SECRET_KEY=${{ secrets.SECRET_KEY }} >> /var/www/drf_project/.env
             "
 
       - name: Deploy to server
