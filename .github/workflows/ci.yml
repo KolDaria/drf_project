@@ -59,8 +59,9 @@ jobs:
 
       - name: Wait for DB service
         run: |
-            sleep 15
-            docker exec -i $(docker ps -q --filter "name=db") pg_isready -U postgres -d postgres
+          sleep 15
+          docker exec -i $(docker ps -q --filter "name=db" --format '{{.Names}}') sh -c 'until pg_isready -U 
+          postgres -d postgres; do echo waiting... && sleep 2; done'
 
       - name: Run migrations
         run: poetry run python manage.py migrate
@@ -70,11 +71,7 @@ jobs:
 
       - name: Stop services (Docker Compose)
         if: always()
-        run: |
-          docker compose down \
-            -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
-            -e POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
-            -v 
+        run: docker compose down -v
 
   build:
     needs: test
