@@ -69,14 +69,26 @@ jobs:
           docker exec -i $(docker ps -q --filter "name=db") psql -U postgres -d postgres -c "SELECT 1"
 
       - name: Run migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_PORT: 5432
         run: poetry run python manage.py migrate
 
       - name: Run tests
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_PORT: 5432
         run: poetry run python manage.py test
 
       - name: Stop services (Docker Compose)
         if: always()
-        run: docker compose down -v
+        run: |
+            DATABASE_URL=${{ secrets.DATABASE_URL }} \
+            POSTGRES_USER=postgres \
+            POSTGRES_DB=postgres \
+            POSTGRES_PASSWORD=password \
+            DATABASE_PORT=5432 \
+            docker compose down -v
 
   build:
     needs: test
