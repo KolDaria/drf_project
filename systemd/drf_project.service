@@ -1,0 +1,11 @@
+[Unit]
+Description=Gunicorn instance to serve drf_project
+After=network.target
+
+[Service]
+User=dr-test
+WorkingDirectory=/var/www/drf_project/drf_project
+ExecStart=/home/dr-test/.cache/pypoetry/virtualenvs/drf-project-ZuEgUKs9-py3.12/bin/gunicorn --workers 3 --bind unix:/var/www/drf_project/drf_project/drf_project.sock drf_project.wsgi:application
+
+[Install]
+WantedBy=multi-user.target
