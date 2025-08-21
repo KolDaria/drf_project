@@ -5,7 +5,8 @@ After=network.target
 [Service]
 User=dr-test
 WorkingDirectory=/var/www/drf_project/drf_project
-ExecStart=/home/dr-test/.local/bin/poetry run gunicorn --workers 3 --bind unix:/var/www/drf_project/drf_project/drf_project.sock --env DJANGO_SETTINGS_MODULE=config.settings config.wsgi:application
+EnvironmentFile=/var/www/drf_project/drf_project/.env
+ExecStart=/home/dr-test/.local/bin/poetry run gunicorn --workers 3 --bind unix:/var/www/drf_project/drf_project/drf_project.sock config.wsgi:application
 
 [Install]
 WantedBy=multi-user.target
