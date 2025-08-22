@@ -56,7 +56,12 @@ jobs:
 
       - name: Start services (Docker Compose)
         run: |
-  
+          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
+          echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+          echo "DATABASE_PORT=5432" >> .env
+          echo "DATABASE_URL=postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@db:5432/${{ secrets.POSTGRES_DB }}" >> .env
+          echo "Created .env file for Docker Compose."
           docker compose up -d db redis
 
       - name: Get DB IP and Wait for DB service
@@ -71,7 +76,7 @@ jobs:
             DB_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $DB_CONTAINER_ID)
             echo "Database container IP: $DB_IP"
             
-            
+            # Проверка доступности через IP
             PGPASSWORD=${{ secrets.POSTGRES_PASSWORD }} psql -h $DB_IP -U postgres -d postgres -c "SELECT 1"
             if [ $? -ne 0 ]; then
               echo "Failed to connect to DB using IP $DB_IP."
@@ -79,37 +84,30 @@ jobs:
             fi
             echo "Successfully connected to DB using IP $DB_IP."
             
-            
-            if ! ping -c 1 db &> /dev/null; then
-              echo "Failed to ping 'db' by hostname. DNS resolution is failing."
-            else
-              echo "'db' hostname is resolvable."
-            fi
-            
-            
+            # Сохраняем IP в output для использования в следующих шагах
             echo "db_ip_address=$DB_IP" >> $GITHUB_OUTPUT
 
       - name: Run migrations
         env:
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-
-          DATABASE_HOST: ${{ steps.db_info.outputs.db_ip_address }}
-          DATABASE_PORT: 5432
-          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+            SECRET_KEY: ${{ secrets.SECRET_KEY }}
+            POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+            POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+            POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+            # Используем IP-адрес, полученный в предыдущем шаге
+            DATABASE_HOST: ${{ steps.db_info.outputs.db_ip_address }}
+            DATABASE_PORT: 5432
+            STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
         run: |
             poetry run python manage.py migrate
 
       - name: Run tests
         env:
-          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-
-          DATABASE_HOST: ${{ steps.db_info.outputs.db_ip_address }}
-          DATABASE_PORT: 5432
+            POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+            POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+            POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+            # Используем IP-адрес, полученный в предыдущем шаге
+            DATABASE_HOST: ${{ steps.db_info.outputs.db_ip_address }}
+            DATABASE_PORT: 5432
         run: poetry run python manage.py test
 
       - name: Stop services (Docker Compose)
