@@ -66,8 +66,26 @@ jobs:
       - name: Wait for DB service
         run: |
           sleep 15
-          PGPASSWORD=${{ secrets.POSTGRES_PASSWORD }} docker compose exec db psql -U postgres -d postgres -c "SELECT 1"
+          # Первая проверка: убедиться, что имя 'db' разрешается
+          # Если 'ping' или 'nslookup' недоступны, эта команда может не сработать.
+          # Попробуем использовать 'docker inspect' для получения IP, если это возможно.
+          DB_CONTAINER_ID=$(docker ps -qf "name=db")
+          if [ -z "$DB_CONTAINER_ID" ]; then
+            echo "Docker container for 'db' not found."
+            exit 1
+          fi
+          DB_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $DB_CONTAINER_ID)
+          echo "Database container IP: $DB_IP"
 
+          # Теперь попробуем подключиться, используя этот IP
+          PGPASSWORD=${{ secrets.POSTGRES_PASSWORD }} psql -h $DB_IP -U postgres -d postgres -c "SELECT 1"
+
+          # Проверка, разрешается ли имя 'db' в системе
+          if ! ping -c 1 db &> /dev/null; then
+            echo "Failed to ping 'db' by hostname. DNS resolution is failing."
+          else
+            echo "'db' hostname is resolvable."
+          fi
       - name: Run migrations
         env:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
