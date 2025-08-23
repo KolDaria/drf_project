@@ -56,35 +56,34 @@ jobs:
 
       - name: Start services (Docker Compose)
         run: |
-          echo "DATABASE_NAME=${{ secrets.POSTGRES_DB }}" > .env 
-          echo "DATABASE_USER=${{ secrets.POSTGRES_USER }}" >> .env
-          echo "DATABASE_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+          # Создаем .env файл. Убедитесь, что ВСЕ необходимые переменные передаются из secrets.
+          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" > .env
+          echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env # <-- САМОЕ ВАЖНОЕ
           echo "DATABASE_PORT=5432" >> .env
+          echo "DATABASE_NAME=${{ secrets.POSTGRES_DB }}" >> .env # Убедитесь, что совпадает с POSTGRES_DB
+          
+          # Другие переменные, которые могут быть нужны для docker-compose.yml
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+          echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> .env
+          echo "EMAIL_HOST_USER=${{ secrets.EMAIL_HOST_USER }}" >> .env
+          echo "EMAIL_HOST_PASSWORD=${{ secrets.EMAIL_HOST_PASSWORD }}" >> .env
+
           echo "Created .env file for Docker Compose."
+          
+          # Запускаем сервисы. Docker Compose подхватит .env файл.
           docker compose up -d db redis
 
-      - name: Get DB IP and Wait for DB service
-        id: db_info
+      - name: Debug DB Startup
         run: |
-            sleep 15
-            DB_CONTAINER_ID=$(docker ps -qf "name=db")
-            if [ -z "$DB_CONTAINER_ID" ]; then
-              echo "Docker container for 'db' not found."
-              exit 1
-            fi
-            DB_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $DB_CONTAINER_ID)
-            echo "Database container IP: $DB_IP"
-            
-            # Проверка доступности через IP
-            PGPASSWORD=${{ secrets.POSTGRES_PASSWORD }} psql -h $DB_IP -U postgres -d postgres -c "SELECT 1"
-            if [ $? -ne 0 ]; then
-              echo "Failed to connect to DB using IP $DB_IP."
-              exit 1
-            fi
-            echo "Successfully connected to DB using IP $DB_IP."
-            
-            # Сохраняем IP в output для использования в следующих шагах
-            echo "db_ip_address=$DB_IP" >> $GITHUB_OUTPUT
+          echo "--- Docker ps -a output ---"
+          docker ps -a # Показывает все контейнеры (запущенные и остановленные)
+          echo "--- Docker Compose logs for db ---"
+          docker logs --tail 100 db || echo "Could not get logs for db container. Maybe it did not start or is not named 'db'."
+          echo "--- Docker Compose logs for all services ---"
+          docker compose logs # Показывает логи всех сервисов
+      
+      
 
       - name: Run migrations
         env:
