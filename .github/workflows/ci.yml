@@ -59,7 +59,7 @@ jobs:
           # Создаем .env файл. Убедитесь, что ВСЕ необходимые переменные передаются из secrets.
           echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" > .env
           echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
-          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env # <-- САМОЕ ВАЖНОЕ
+          echo "POSTGRES_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" >> .env # <-- САМОЕ ВАЖНОЕ
           echo "DATABASE_PORT=5432" >> .env
           echo "DATABASE_NAME=${{ secrets.POSTGRES_DB }}" >> .env # Убедитесь, что совпадает с POSTGRES_DB
           
@@ -119,21 +119,22 @@ jobs:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           DATABASE_NAME: ${{ secrets.POSTGRES_DB }}
           DATABASE_USER: ${{ secrets.POSTGRES_USER }}
-          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+          # !!! Убедитесь, что имя переменной здесь ТОЧНО совпадает с тем, что читает settings.py
+          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }} # <-- Здесь должно быть DATABASE_PASSWORD
           DATABASE_HOST: ${{ steps.db_info.outputs.db_ip_address }}
           DATABASE_PORT: 5432
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
           EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
         run: |
-              poetry run python manage.py migrate
+            poetry run python manage.py migrate
 
       - name: Run tests
         env:
-            POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-            POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
-            POSTGRES_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
-            # Используем IP-адрес, полученный в предыдущем шаге
+            # Убедитесь, что имена переменных здесь также ТОЧНО соответствуют settings.py
+            DATABASE_NAME: ${{ secrets.POSTGRES_DB }}
+            DATABASE_USER: ${{ secrets.POSTGRES_USER }}
+            DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }} # <-- Здесь должно быть DATABASE_PASSWORD
             DATABASE_HOST: ${{ steps.db_info.outputs.db_ip_address }}
             DATABASE_PORT: 5432
         run: poetry run python manage.py test
