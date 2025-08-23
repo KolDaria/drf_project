@@ -74,16 +74,45 @@ jobs:
           # Запускаем сервисы. Docker Compose подхватит .env файл.
           docker compose up -d db redis
 
-      - name: Debug DB Startup
+      - name: Get DB IP and Wait for DB service
+        id: db_info
         run: |
-          echo "--- Docker ps -a output ---"
-          docker ps -a # Показывает все контейнеры (запущенные и остановленные)
-          echo "--- Docker Compose logs for db ---"
-          docker logs --tail 100 db || echo "Could not get logs for db container. Maybe it did not start or is not named 'db'."
-          echo "--- Docker Compose logs for all services ---"
-          docker compose logs # Показывает логи всех сервисов
-      
-      
+          sleep 15
+          
+          # Ищем контейнер по имени сервиса 'db' в рамках проекта Docker Compose
+          # Это более надежный способ, чем просто "name=db"
+          DB_CONTAINER_ID=$(docker ps -qf "label=com.docker.compose.service=db")
+          
+          if [ -z "$DB_CONTAINER_ID" ]; then
+            echo "Docker container for service 'db' not found."
+            echo "--- Docker ps -a output ---"
+            docker ps -a # Выводим все контейнеры для отладки
+            echo "--- Docker Compose logs for db ---"
+            # Пытаемся получить логи по имени сервиса, а не просто 'db'
+            # Имя сервиса должно быть 'db' как вы указали в docker-compose.yml
+            # Если имя контейнера отличается, мы уже вывели docker ps -a
+            docker compose logs db || echo "Could not get logs for 'db' service."
+            echo "--- Docker Compose logs for all services ---"
+            docker compose logs
+            exit 1
+          fi
+          
+          DB_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $DB_CONTAINER_ID)
+          echo "Database container IP: $DB_IP"
+          
+          # Проверка доступности через IP
+          # Убедитесь, что PGPASSWORD корректно подставлен из секрета
+          PGPASSWORD=${{ secrets.POSTGRES_PASSWORD }} psql -h $DB_IP -U postgres -d postgres -c "SELECT 1"
+          if [ $? -ne 0 ]; then
+            echo "Failed to connect to DB using IP $DB_IP."
+            echo "--- PostgreSQL Logs (should be visible from docker compose logs) ---"
+            docker compose logs db || echo "Could not get logs for 'db' service."
+            exit 1
+          fi
+          echo "Successfully connected to DB using IP $DB_IP."
+          
+          # Сохраняем IP в output для использования в следующих шагах
+          echo "db_ip_address=$DB_IP" >> $GITHUB_OUTPUT
 
       - name: Run migrations
         env:
