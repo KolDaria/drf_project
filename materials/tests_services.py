@@ -12,7 +12,7 @@ class StripeServiceTests(TestCase):
         mock_create.return_value.id = 'prod_123'  # Имитация успешного ответа Stripe
         stripe_service = StripeApiService()
         product_id = stripe_service.get_create_stripe_product(
-            MockCourse(name='Test Course') # Передаем как позиционный аргумент
+            MockCourse(name='Test Course')
         )
         self.assertEqual(product_id, 'prod_123')
 
@@ -21,7 +21,7 @@ class StripeServiceTests(TestCase):
         mock_create.side_effect = stripe.error.StripeError("Stripe API Error")  # Имитация ошибки Stripe
         stripe_service = StripeApiService()
         product_id = stripe_service.get_create_stripe_product(
-            MockCourse(name='Test Course') # Передаем как позиционный аргумент
+            MockCourse(name='Test Course')
         )
         self.assertIsNone(product_id)  # Проверка, что при ошибке возвращается None
 
@@ -30,7 +30,7 @@ class StripeServiceTests(TestCase):
     @patch('stripe.Product.create')
     def test_create_stripe_price_success(self, mock_product_create, mock_product_retrieve, mock_price_create):
         mock_product_create.return_value.id = 'prod_123'
-        mock_product_retrieve.return_value.id = 'prod_123'  # Указываем, что retrieve возвращает объект с id = 'prod_123'
+        mock_product_retrieve.return_value.id = 'prod_123'
         mock_price_create.return_value.id = 'price_123'
         stripe_service = StripeApiService()
         course = MockCourse(name='Test Course', price=100)

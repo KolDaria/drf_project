@@ -1,0 +1,198 @@
+name: Django CI/CD
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+
+      - name: Configure Poetry
+        run: |
+          poetry config virtualenvs.create false 
+          poetry config installer.max-workers 2   
+
+      - name: Install dependencies
+        run: poetry install --no-root --no-interaction --no-ansi
+
+      - name: Run Flake8
+        run: poetry run flake8 .
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+           python-version: '3.12'
+
+      - name: Install Poetry
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+
+      - name: Configure Poetry
+        run: |
+          poetry config virtualenvs.create false 
+          poetry config installer.max-workers 2
+
+      - name: Install dependencies
+        run: poetry install --no-root --no-interaction --no-ansi
+
+      - name: Start services (Docker Compose)
+        run: |
+          # Создаем .env файл. Убедитесь, что ВСЕ необходимые переменные передаются из secrets.
+          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" > .env
+          echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env # <-- САМОЕ ВАЖНОЕ
+          echo "DATABASE_PORT=5432" >> .env
+          echo "DATABASE_NAME=${{ secrets.POSTGRES_DB }}" >> .env # Убедитесь, что совпадает с POSTGRES_DB
+          
+          # Другие переменные, которые могут быть нужны для docker-compose.yml
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+          echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> .env
+          echo "EMAIL_HOST_USER=${{ secrets.EMAIL_HOST_USER }}" >> .env
+          echo "EMAIL_HOST_PASSWORD=${{ secrets.EMAIL_HOST_PASSWORD }}" >> .env
+
+          echo "Created .env file for Docker Compose."
+          
+          # Запускаем сервисы. Docker Compose подхватит .env файл.
+          docker compose up -d db redis
+
+      - name: Get DB IP and Wait for DB service
+        id: db_info
+        run: |
+          sleep 15
+          
+          # Ищем контейнер по имени сервиса 'db' в рамках проекта Docker Compose
+          # Это более надежный способ, чем просто "name=db"
+          DB_CONTAINER_ID=$(docker ps -qf "label=com.docker.compose.service=db")
+          
+          if [ -z "$DB_CONTAINER_ID" ]; then
+            echo "Docker container for service 'db' not found."
+            echo "--- Docker ps -a output ---"
+            docker ps -a # Выводим все контейнеры для отладки
+            echo "--- Docker Compose logs for db ---"
+            # Пытаемся получить логи по имени сервиса, а не просто 'db'
+            # Имя сервиса должно быть 'db' как вы указали в docker-compose.yml
+            # Если имя контейнера отличается, мы уже вывели docker ps -a
+            docker compose logs db || echo "Could not get logs for 'db' service."
+            echo "--- Docker Compose logs for all services ---"
+            docker compose logs
+            exit 1
+          fi
+          
+          DB_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $DB_CONTAINER_ID)
+          echo "Database container IP: $DB_IP"
+          
+          # Проверка доступности через IP
+          # Убедитесь, что PGPASSWORD корректно подставлен из секрета
+          PGPASSWORD=${{ secrets.POSTGRES_PASSWORD }} psql -h $DB_IP -U postgres -d postgres -c "SELECT 1"
+          if [ $? -ne 0 ]; then
+            echo "Failed to connect to DB using IP $DB_IP."
+            echo "--- PostgreSQL Logs (should be visible from docker compose logs) ---"
+            docker compose logs db || echo "Could not get logs for 'db' service."
+            exit 1
+          fi
+          echo "Successfully connected to DB using IP $DB_IP."
+          
+          # Сохраняем IP в output для использования в следующих шагах
+          echo "db_ip_address=$DB_IP" >> $GITHUB_OUTPUT
+
+      - name: Run migrations
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DATABASE_NAME: ${{ secrets.POSTGRES_DB }}
+          DATABASE_USER: ${{ secrets.POSTGRES_USER }}
+          # !!! Убедитесь, что имя переменной здесь ТОЧНО совпадает с тем, что читает settings.py
+          DATABASE_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }} # <-- Здесь должно быть DATABASE_PASSWORD
+          DATABASE_HOST: ${{ steps.db_info.outputs.db_ip_address }}
+          DATABASE_PORT: 5432
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
+          EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
+        run: |
+            poetry run python manage.py migrate
+
+      - name: Run tests
+        env:
+            # Убедитесь, что имена переменных здесь также ТОЧНО соответствуют settings.py
+            DATABASE_NAME: ${{ secrets.POSTGRES_DB }}
+            DATABASE_USER: ${{ secrets.POSTGRES_USER }}
+            DATABASE_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }} # <-- Здесь должно быть DATABASE_PASSWORD
+            DATABASE_HOST: ${{ steps.db_info.outputs.db_ip_address }}
+            DATABASE_PORT: 5432
+        run: poetry run python manage.py test
+
+      - name: Stop services (Docker Compose)
+        if: always()
+        run: docker compose down -v
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Log in in Docker Hub
+        run: echo ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }} | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
+
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/myapp:${{ github.sha }} .
+
+      - name: Push Docker image in Docker Hub
+        run: docker push ${{ secrets.DOCKER_HUB_USERNAME }}/myapp:${{ github.sha }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Copy docker-compose.yml to server
+        run: |
+            scp -o StrictHostKeyChecking=no docker-compose.yml ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:/var/www/drf_project/docker-compose.yml
+
+      - name: Create .env file on server
+        run: |
+          ssh -tt -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "
+            mkdir -p /var/www/drf_project
+            echo DATABASE_URL=${{ secrets.DATABASE_URL }} > /var/www/drf_project/.env
+            echo POSTGRES_USER=${{ secrets.POSTGRES_USER }} >> /var/www/drf_project/.env # <-- Используйте секрет
+            echo POSTGRES_DB=${{ secrets.POSTGRES_DB }} >> /var/www/drf_project/.env 
+            echo POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} >> /var/www/drf_project/.env
+            echo DATABASE_PORT=5432 >> /var/www/drf_project/.env
+            "
+
+      - name: Deploy to server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets. SERVER_IP }} << 'EOF'
+          docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/myapp:${{ github.sha }}
+          docker stop myapp || true
+          docker rm myapp || true
+          docker run -d --name myapp -p 8001:8000 -e DJANGO_SETTINGS_MODULE=drf_project.settings.production \
+          -v /code/static:/code/static \
+           ${{ secrets.DOCKER_HUB_USERNAME }}/myapp:${{ github.sha }}
+          EOF

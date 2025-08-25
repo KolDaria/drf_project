@@ -15,7 +15,7 @@ from materials.permissions import IsModerator, IsOwner
 from materials.serializers import CourseSerializer, LessonSerializer
 from materials.services import StripeApiService
 from materials.tasks import send_course_update_notification
-from users.models import Payments, Subscription
+from users.models import Subscription
 
 stripe_service = StripeApiService()
 
@@ -125,7 +125,7 @@ class CourseViewSet(viewsets.ModelViewSet):
                     )
                 except Exception as e:
                     print(
-                        f"Ошибка при отправке уведомления подписчику {subscription.user.email}: {e}")  # Логируем ошибки
+                        f"Ошибка при отправке уведомления подписчику {subscription.user.email}: {e}")
 
         return Response(serializer.data)
 
@@ -184,7 +184,7 @@ class CreateStripeCheckoutSessionView(APIView):
             )
 
         # 2.  Формируем URL-ы для успеха и отмены платежа.
-        success_url = request.build_absolute_uri(reverse('materials:payment_success', args=[course.pk]))  # materials: из urls.py
+        success_url = request.build_absolute_uri(reverse('materials:payment_success', args=[course.pk]))
         cancel_url = request.build_absolute_uri(reverse('materials:payment_cancel', args=[course.pk]))
 
         # 3. Создаем сессию Stripe Checkout
@@ -201,9 +201,9 @@ class CreateStripeCheckoutSessionView(APIView):
             )
 
         # 4. Создаем запись о платеже в нашей системе (используем модель Payments из users)
-        from users.models import Payments  # Импортируем модель Payments
+        from users.models import Payments
 
-        payment = Payments.objects.create(
+        Payments.objects.create(
             user=request.user,
             paid_course=course,
             payment_date=timezone.now(),
@@ -224,7 +224,7 @@ class PaymentSuccessView(APIView):
         """
         Обрабатывает успешную оплату курса.
         """
-        course = get_object_or_404(Course, pk=course_id)
+        get_object_or_404(Course, pk=course_id)
         # Дополнительная логика, например, предоставление доступа к курсу
 
         return Response({"message": "Оплата успешно произведена! Доступ к курсу предоставлен."},
@@ -238,7 +238,7 @@ class PaymentCancelView(APIView):
         """
         Обрабатывает отмену оплаты курса.
         """
-        course = get_object_or_404(Course, pk=course_id)
+        get_object_or_404(Course, pk=course_id)
         # Логика при отмене платежа
 
         return Response({"message": "Оплата отменена."}, status=status.HTTP_200_OK)

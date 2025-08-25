@@ -1,14 +1,12 @@
-version: '3.9'
-
 services:
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
     volumes:
       - .:/code
       - static_volume:/code/static
     ports:
-      - "8000:8000"
+      - "8001:8000"
     depends_on:
       - db
     env_file:
@@ -20,16 +18,31 @@ services:
       retries: 3
       start_period: 60s
 
+  nginx:
+    build:
+      context: ./nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx/lib/postgresql/data
+    env_file:
+        - ./.env
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d drf_project" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   db:
-    image: postgres:17
+    image: postgres:latest
     ports:
       - "5432:5432"
+    env_file: ./.env
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    env_file:
-      - ./.env
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB" ]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d drf_project" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -52,7 +65,7 @@ services:
   # Celery Worker (опционально)
   celery_worker:
     build: .
-    command: celery -A drf_project worker -l info  # drf_project Название проекта
+    command: celery -A config.celery worker -l info
     volumes:
       - .:/code
     depends_on:
@@ -60,6 +73,8 @@ services:
       - redis
     env_file:
       - ./.env
+    environment:
+      CELERY_APP: config.celery
     healthcheck:
       test: [ "CMD-SHELL", "celery inspect ping -d celery@$HOSTNAME || exit 1" ]
       interval: 30s
@@ -70,7 +85,7 @@ services:
   # Celery Beat (опционально, для планировщика задач)
   celery_beat:
     build: .
-    command: celery -A drf_project beat -l info # drf_project Название проекта
+    command: celery beat -A config.celery -l info
     volumes:
       - .:/code
     depends_on:
@@ -78,6 +93,8 @@ services:
       - celery_worker
     env_file:
       - ./.env
+    environment:
+      CELERY_APP: config.celery
     healthcheck:
       test: [ "CMD-SHELL", "celery inspect ping -d celerybeat@$HOSTNAME || exit 1" ]
       interval: 30s

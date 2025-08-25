@@ -94,7 +94,7 @@ class StripeApiService:
                 cancel_url=cancel_url,
             )
             return session  # Возвращаем объект сессии
-        except stripe.error.StripeError as e:
+        except stripe.error.StripeError:
             return None  # Возвращаем None в случае ошибки
 
     def retrieve_stripe_checkout_session(self, session_id):
